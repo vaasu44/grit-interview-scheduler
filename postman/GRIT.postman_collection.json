@@ -1,0 +1,489 @@
+{
+ "info": {
+  "name": "GRIT Interview Scheduler",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "variable": [
+  {
+   "key": "base",
+   "value": "http://localhost:8000"
+  },
+  {
+   "key": "student",
+   "value": "4"
+  },
+  {
+   "key": "team",
+   "value": "1"
+  },
+  {
+   "key": "other_interviewer",
+   "value": "3"
+  },
+  {
+   "key": "tomorrow",
+   "value": "2026-11-15"
+  },
+  {
+   "key": "slot_id",
+   "value": ""
+  },
+  {
+   "key": "interview_id",
+   "value": ""
+  },
+  {
+   "key": "interviewer_id",
+   "value": "2"
+  },
+  {
+   "key": "slot_day",
+   "value": ""
+  }
+ ],
+ "item": [
+  {
+   "name": "00 Health",
+   "request": {
+    "method": "GET",
+    "header": [],
+    "url": "{{base}}/api/health"
+   }
+  },
+  {
+   "name": "01 Student (Aarav) - status",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/me/status"
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('eligible',()=>pm.expect(pm.response.json().state).to.eql('ELIGIBLE'));"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "02 Student - available slots",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/slots/available"
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "const s=pm.response.json();pm.test('has slots',()=>pm.expect(s.length).to.be.above(0));pm.collectionVariables.set('slot_id',s[0].id);"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "03 Student - book slot",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviews",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"slot_id\": \"{{slot_id}}\"\n}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.response.to.have.status(201);",
+       "const j=pm.response.json();",
+       "pm.collectionVariables.set('interview_id',j.id);",
+       "pm.collectionVariables.set('interviewer_id',j.interviewer_id);",
+       "pm.collectionVariables.set('other_interviewer',5-j.interviewer_id);",
+       "pm.collectionVariables.set('slot_day',String(j.start_time).slice(0,10));",
+       "pm.collectionVariables.set('tomorrow',new Date(Date.now()+864e5).toLocaleDateString('en-CA'));"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "04 Student - double book (expect 409)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviews",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"slot_id\": \"{{slot_id}}\"\n}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.response.to.have.status(409);"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "05 Other student same slot (expect 409)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "11"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviews",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"slot_id\": \"{{slot_id}}\"\n}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.response.to.have.status(409);"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "06 Student - status (BOOKED)",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/me/status"
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('booked',()=>pm.expect(pm.response.json().state).to.eql('BOOKED'));"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "07 Team - dashboard",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{team}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/team/students"
+   }
+  },
+  {
+   "name": "08 Interviewer - schedule (day of booked slot)",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{interviewer_id}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviewer/schedule?day={{slot_day}}"
+   }
+  },
+  {
+   "name": "09 Interviewer - add availability",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{interviewer_id}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviewer/availability",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"day\": \"{{tomorrow}}\",\n  \"start\": \"15:00\",\n  \"end\": \"16:00\"\n}"
+    }
+   }
+  },
+  {
+   "name": "10 Wrong interviewer outcome (expect 403)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{other_interviewer}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviews/{{interview_id}}/outcome",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"outcome\": \"PASS\"\n}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.response.to.have.status(403);"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "11 Retake-later without feedback (expect 422)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{interviewer_id}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviews/{{interview_id}}/outcome",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"outcome\": \"RETAKE_LATER\"\n}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.response.to.have.status(422);"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "12 Record outcome: RETAKE_LATER",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{interviewer_id}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviews/{{interview_id}}/outcome",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"outcome\": \"RETAKE_LATER\",\n  \"notes\": \"Revise DB indexing.\"\n}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('saved',()=>pm.expect(pm.response.json().status).to.eql('RETAKE_LATER'));"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "13 Student - status (RETAKE_LATER)",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/me/status"
+   }
+  },
+  {
+   "name": "14 Student books again during cooldown (expect 409)",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/interviews",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"slot_id\": \"{{slot_id}}\"\n}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.response.to.have.status(409);"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "15 Team nullify Rohan",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{team}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/team/students/6/nullify",
+    "body": {
+     "mode": "raw",
+     "raw": "{\n  \"reason\": \"Malpractice flagged\"\n}"
+    }
+   }
+  },
+  {
+   "name": "16 Student role on team endpoint (expect 403)",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "X-User-Id",
+      "value": "{{student}}"
+     },
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "url": "{{base}}/api/team/students"
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.response.to.have.status(403);"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
